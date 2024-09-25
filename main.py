@@ -58,6 +58,7 @@ def mc_repeat(n: int, k: int) -> bool:
 
     return True
 
+
 def encode_string(s: str) -> int:
     """COnverts a string to an integer using the BEATCATII encoding scheme.
 
@@ -76,37 +77,43 @@ def encode_string(s: str) -> int:
         output += (ord(bword[i]) - 96) * 27**i
         print(f"output+= {ord(bword[i]) - 96} * 27^{i}")
 
+    print(output)
+
     return output
 
 
 if __name__ == "__main__":
-    # get user input
-    e = int(input("Enter a positive integer e: "))
-
-    M = input("Enter a message M (case-insensitive): ")
-    M = M.lower()
-
     # prime generation
-    p = 0
-    q = 0
-    while True:
-        p = random.randint(100, 1000)
-        q = random.randint(100, 1000)
-        if mc_repeat(p, 10) and mc_repeat(q, 10):
-            break
-
-    # calculate n
-    n = p * q
-
-    # calculate phi(n)
-    phi_n = (p - 1) * (q - 1)
-
+    phi_n = None
+    e = None
     # check if e and phi(n) are coprime
     # Once primes p and q are computed reject if the totient function of n = pq
     # is not relatively prime to the public key e, i.e., reject if
-    # gcd(e,φ(n)) > 1. If this happens, then generate new primes p and q and
-    while math.gcd(e, phi_n) != 1:
+    # gcd(e,φ(n)) != 1. If this happens, then generate new primes p and q and
+    while not (phi_n or e) or math.gcd(e, phi_n) != 1:
         e = int(input("Enter a positive integer e: "))
+        p = 0
+        q = 0
+        # generate p and q
+        # n = pq must satisfy 456975 < n < 4294967297
+        # p and q must satisfy miller-rabin prime test with mc_repeat(10)
+        while (
+            p * q < 456975
+            or p * q > 4294967297
+            or not mc_repeat(p, 10)
+            or not mc_repeat(q, 10)
+        ):
+            p = random.randint(1000, 10000)
+            q = random.randint(1000, 10000)
+
+        # calculate n
+        n = p * q
+
+        # calculate phi(n)
+        phi_n = (p - 1) * (q - 1)
+
+    M = input("Enter a message M (case-insensitive): ")
+    M = M.lower()
 
     # encryption
     C = encode_string(M)
