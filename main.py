@@ -12,7 +12,7 @@ working correctly then M should be equal to P.
 
 import math
 import random
-
+from typing import Tuple
 
 def miller_rabin_prime_test(n: int) -> bool:
     """
@@ -71,16 +71,46 @@ def encode_string(s: str) -> int:
     Returns:
         int: encoded integer
     """
+    s = s.lower() # convert to lowercase
     output = 0
     bword = s[::-1]
     for i in range(len(s)):
         output += (ord(bword[i]) - 96) * 27**i
-        print(f"output+= {ord(bword[i]) - 96} * 27^{i}")
-
-    print(output)
+        #        print(f"output+= {ord(bword[i]) - 96} * 27^{i}")
 
     return output
 
+def decode_string(n: int) -> str:
+    """Converts an integer to a string using the BEATCATII encoding scheme.
+
+    A, B, ..., Z are assigned to 1, 2, ..., 26 respectively.
+    Space is assigned to 0.
+
+    Args:
+        n (int): input integer
+
+    Returns:
+        str: decoded string
+    """
+    output = ""
+    while n > 0:
+        n, r = divmod(n, 27)
+        if r == 0:
+            output += " "
+        else:
+            output += chr(r + 96)
+
+    return output[::-1]
+
+# from https://en.wikibooks.org/wiki/Algorithm_Implementation/Mathematics/Extended_Euclidean_algorithm
+def extended_euclidean_gcd(a: int, b: int) -> Tuple[int, int, int]:
+    """return (g, x, y) such that a*x + b*y = g = gcd(a, b)"""
+    if a == 0:
+        return (b, 0, 1)
+    else:
+        b_div_a, b_mod_a = divmod(b, a)
+        g, x, y = extended_euclidean_gcd(b_mod_a, a)
+        return (g, y - b_div_a * x, x)
 
 if __name__ == "__main__":
     # prime generation
@@ -91,7 +121,13 @@ if __name__ == "__main__":
     # is not relatively prime to the public key e, i.e., reject if
     # gcd(e,φ(n)) != 1. If this happens, then generate new primes p and q and
     while not (phi_n or e) or math.gcd(e, phi_n) != 1:
-        e = int(input("Enter a positive integer e: "))
+        try:            
+            e = int(input("Enter a positive integer e: "))
+            if e < 0:
+                raise ValueError
+        except ValueError:
+            print("Invalid input. Please enter a positive integer.")
+            continue
         p = 0
         q = 0
         # generate p and q
@@ -112,19 +148,46 @@ if __name__ == "__main__":
         # calculate phi(n)
         phi_n = (p - 1) * (q - 1)
 
-    M = input("Enter a message M (case-insensitive): ")
-    M = M.lower()
+    # message
+    M = None
+    while not M:
+        M = input("Enter a message (<= 4 characters): ")
+        # make sure the message is not empty, only contains letters and spaces
+        if not M or not M.replace(" ", "").isalpha() or len(M) > 4:
+            print("Invalid input. Please enter a message up to four characters long containing only letters and spaces.")
+            M = None
+
+    # encode the message into a number. this is NOT encryption
+    m = encode_string(M)
 
     # encryption
-    C = encode_string(M)
+    # C = M^e mod n
+    C = pow(m, e, n)
+
+    # private key calculation
+    # private key d is the modular multiplicative inverse of e mod phi(n),
+    # where phi(n) is the totient function of n = pq
+    # We will use the extended euclidean algorithm to find d
+    # d = s mod phi(n)
+    # if s < 0, d = s % phi(n) + phi(n)
+    g, s, _ = extended_euclidean_gcd(e, phi_n)
+    d = s % phi_n
+    if s < 0:
+        d = s % phi_n + phi_n
+
 
     # decryption
-    P = C
+    # M = C^d mod n
+    P = pow(C, d, n)
 
-    # output
-    print(f"p: {p}")
-    print(f"q: {q}")
-    print(f"n: {n}")
-    print(f"M: {M}")
-    print(f"C: {C}")
-    print(f"P: {P}")
+    # print
+    indent = " " * 2
+    stats = f"\nTesting with M = {M} and e = {e}:\n"
+    stats += f"{indent}p: {p}\n"
+    stats += f"{indent}q: {q}\n"
+    stats += f"{indent}n: {n}\n"
+    stats += f"{indent}M: {M}\n"
+    stats += f"{indent}C: {C}\n"
+    stats += f"{indent}Encoded P: {P}\n"
+    stats += f"{indent}Decoded P: {decode_string(P)}"
+    print(stats)
