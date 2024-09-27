@@ -105,15 +105,21 @@ def decode_string(n: int) -> str:
     return output[::-1]
 
 
-# from https://en.wikibooks.org/wiki/Algorithm_Implementation/Mathematics/Extended_Euclidean_algorithm
 def extended_euclidean_gcd(a: int, b: int) -> Tuple[int, int, int]:
-    """return (g, x, y) such that a*x + b*y = g = gcd(a, b)"""
+    """Extended Euclidean Algorithm: ax + by = gcd(a, b)
+
+    Args:
+        a (int): first number
+        b (int): second number
+
+    Returns:
+        Tuple[int, int, int]: gcd(a, b), x, y
+    """
     if a == 0:
-        return (b, 0, 1)
+        return b, 0, 1
     else:
-        b_div_a, b_mod_a = divmod(b, a)
-        g, x, y = extended_euclidean_gcd(b_mod_a, a)
-        return (g, y - b_div_a * x, x)
+        gcd, x, y = extended_euclidean_gcd(b % a, a)
+        return gcd, y - (b // a) * x, x
 
 
 def validate_message(s: str) -> bool:
@@ -221,4 +227,5 @@ if __name__ == "__main__":
     stats += f"{indent}C: {C}\n"
     stats += f"{indent}Encoded P: {P}\n"
     stats += f"{indent}Decoded P: {decode_string(P)}"
+    stats += f"\n{indent}P == M: {decode_string(P) == M}"
     print(stats)
